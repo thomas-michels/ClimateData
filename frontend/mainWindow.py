@@ -1,18 +1,18 @@
 import sys
-import time
 from datetime import date
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import QMovie
 from PyQt5.QtWidgets import QLabel
 
-from frontend.loadingScreen import LoadingScreen
 from frontend.styleSheet import STYLE
 from settings import PROJECT_NAME, INIT_SCREEN_X, INIT_SCREEN_Y, SIZE_X, SIZE_Y
 
 
 class MainWindow:
+
+    _components = {}
+
     def __init__(self):
         self.app = QtWidgets.QApplication(sys.argv)
 
@@ -26,46 +26,57 @@ class MainWindow:
         self._font_bold.setBold(True)
 
         self.init_gui()
-        self.load()
+        self.lbl_load = self.load()
+
+        self.btn_download.clicked.connect(self.start_load)
 
         self.window.show()
         self.window.setWindowTitle(PROJECT_NAME)
         self.window.setStyleSheet(STYLE)
         self.window.setGeometry(INIT_SCREEN_X, INIT_SCREEN_Y, SIZE_X, SIZE_Y)
 
-        if self.btn_download.pressed():
-            self.start_load(self.movie)
-
         sys.exit(self.app.exec())
 
     def init_gui(self):
 
         lbl_files = self._create_label("Quantidade de Arquivos", 55, 20, 200, 30, bold=True)
+        self._components['lbl_files'] = lbl_files
 
         cb_files = self._create_combo_box(55, 60, 190, 100)
         cb_files.addItem('1 Arquivo')
         cb_files.addItem('Vários Arquivos')
+        self._components['cb_files'] = cb_files
 
         lbl_extract = self._create_label("Extração", 55, 100, 190, 30, bold=True)
+        self._components['lbl_extract'] = lbl_extract
 
         lbl_url = self._create_label('URL', 55, 135, 190, 30)
+        self._components['lbl_url'] = lbl_url
 
         cb_station = self._create_combo_box(120, 140, 190, 30)
         cb_station.addItem('Weather')
+        self._components['cb_station'] = cb_station
 
         lbl_station = self._create_label("Estação", 55, 180, 190, 30)
+        self._components['lbl_station'] = lbl_station
 
         et_station = self._create_edit_text(120, 180, 150, 30)
+        self._components['et_station'] = et_station
 
         lbl_init_date = self._create_label('Data Início', 55, 220, 190, 30)
+        self._components['lbl_init_date'] = lbl_init_date
 
         dt_init = self._create_date_edit(140, 220, 190, 30)
+        self._components['dt_init'] = dt_init
 
         lbl_final_date = self._create_label('Data Final', 55, 260, 190, 30)
+        self._components['lbl_final_date'] = lbl_final_date
 
         dt_final = self._create_date_edit(140, 260, 190, 30)
+        self._components['dt_final'] = dt_final
 
         self.btn_download = self._create_button('BAIXAR', 90, 420, 120, 40)
+        self._components['btn_download'] = self.btn_download
 
     def load(self):
         label = QLabel(self.window)
@@ -73,15 +84,21 @@ class MainWindow:
         self.movie = QMovie('frontend/images/loading.gif')
         label.setMovie(self.movie)
         label.setScaledContents(True)
-        label.setGeometry(0, 100, 300, 300)
+        label.setGeometry(25, 100, 250, 250)
+        label.setVisible(False)
+        return label
 
-        timer = QTimer(self.window)
+    def start_load(self):
+        self._components_visible(False)
+        self.lbl_load.setVisible(True)
+        self.movie.start()
 
-    def start_load(self, movie):
-        movie.start()
+    def stop_load(self):
+        self.movie.stop()
 
-    def stop_load(self, movie):
-        movie.stop()
+    def _components_visible(self, bool):
+        for component in self._components.keys():
+            self._components[component].setVisible(bool)
 
     def _create_button(self, text, pos_x, pos_y, tam_x, tam_y):
         btn = QtWidgets.QPushButton(text, self.window)
