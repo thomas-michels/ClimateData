@@ -53,7 +53,7 @@ class MainWindow:
         lbl_extract = self._create_label("EXTRAÇÃO", 110, 130, 190, 30, bold=True)
         self._components['lbl_extract'] = lbl_extract
 
-        lbl_url = self._create_label('URL', 55, 190, 190, 30)
+        lbl_url = self._create_label('URL', 50, 190, 190, 30)
         self._components['lbl_url'] = lbl_url
 
         cb_station = self._create_combo_box(140, 190, 190, 30)
