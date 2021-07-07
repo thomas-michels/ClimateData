@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtGui import QMovie
 from PyQt5.QtWidgets import QLabel
 
-from frontend.styleSheet import STYLE
+from frontend.css.styleSheet import STYLE
 from settings import PROJECT_NAME, INIT_SCREEN_X, INIT_SCREEN_Y, SIZE_X, SIZE_Y, VERSION
 
 
