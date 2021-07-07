@@ -1,5 +1,5 @@
 
-PROJECT_NAME = 'Climate Data'
+PROJECT_NAME = 'Climate Data Extractor'
 VERSION = 'By Thomas Michels Rodrigues - v2.0'
 INIT_SCREEN_X = 400
 INIT_SCREEN_Y = 100

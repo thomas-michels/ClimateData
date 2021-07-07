@@ -35,6 +35,7 @@ class MainWindow:
 
         self.window.show()
         self.window.setWindowTitle(PROJECT_NAME)
+        self.window.setWindowIcon(QtGui.QIcon('frontend/images/logo.png'))
         self.window.setStyleSheet(STYLE)
         self.window.setGeometry(INIT_SCREEN_X, INIT_SCREEN_Y, SIZE_X, SIZE_Y)
 
