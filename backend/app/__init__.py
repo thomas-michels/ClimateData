@@ -5,6 +5,7 @@ from typing import List
 import pendulum
 
 from backend.app.exceptions import UnprocessableEntityException
+from backend.app.file_creator import File
 from backend.app.utils import check_is_future_date
 from backend.enums import Enums
 from requests import get
@@ -31,6 +32,9 @@ class ExtractorManager:
         all_data = []
         for day in self._period:
             data = get(self.create_url(day))
+            if data.status_code == 400:
+                data = get(self.create_url(day))
+
             if data.status_code != 200:
                 raise UnprocessableEntityException('Estação inválida')
 
@@ -39,10 +43,13 @@ class ExtractorManager:
         self.save(all_data)
 
     def save(self, all_data: List[dict]):
-        if self._files == 'Varios Arquivos':
-
-            name = f'{self._date_initial.year}-{self._date_initial.month}-{self._date_initial.day}' \
+        if self._files == '1 Arquivo':
+            station = all_data[0]['observations'][0]['stationID']
+            name = f'{station}-' \
+                   f'{self._date_initial.year}-{self._date_initial.month}-{self._date_initial.day}' \
                    f'_{self._date_final.year}-{self._date_final.month}-{self._date_final.day}'
+
+            file = File().get_file(name)
 
             for data in all_data:
                 data = data['observations']
@@ -51,23 +58,47 @@ class ExtractorManager:
                     line = ''
                     for key in observations.keys():
                         if not type(observations[key]) == dict:
-                            line += str(observations[key]) + ','
+                            line += str(observations[key]) + ';'
 
                         else:
                             for new_key in observations[key].keys():
-                                line += str(observations[key][new_key]) + ','
+                                line += str(observations[key][new_key]) + ';'
 
-                    line = line[0:-1] + line[-1].replace(',', '\n')
-                    print(line)
+                    line = line[0:-1] + line[-1].replace(';', '\n')
+                    file.write(line)
 
         else:
-            pass
+            station = all_data[0]['observations'][0]['stationID']
+
+            for data in all_data:
+                data = data['observations']
+
+                for observations in data:
+
+                    date = observations['obsTimeLocal'][:10]
+                    name = f'{station}-' \
+                           f'{date}'
+
+                    file = File().get_file(name)
+
+                    line = ''
+
+                    for key in observations.keys():
+                        if not type(observations[key]) == dict:
+                            line += str(observations[key]) + ';'
+
+                        else:
+                            for new_key in observations[key].keys():
+                                line += str(observations[key][new_key]) + ';'
+
+                    line = line[0:-1] + line[-1].replace(';', '\n')
+                    file.write(line)
 
     def create_url(self, date_for_url: datetime):
         url = Enums().urls[self._url]
 
-        month = date_for_url.month if date_for_url.month > 10 else f'0{date_for_url.month}'
-        day = date_for_url.day if date_for_url.day > 10 else f'0{date_for_url.day}'
+        month = date_for_url.month if date_for_url.month > 9 else f'0{date_for_url.month}'
+        day = date_for_url.day if date_for_url.day > 9 else f'0{date_for_url.day}'
 
         url = url.replace("$$$$$$$$", f"{date_for_url.year}{month}{day}")
         url = url.replace("#####", self._station)

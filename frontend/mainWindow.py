@@ -1,4 +1,5 @@
 import sys
+import time
 from datetime import datetime
 
 from PyQt5 import QtWidgets, QtGui
@@ -104,7 +105,9 @@ class MainWindow:
             em.extract()
 
         except Exception as exc:
-            print(exc.args)
+            pass
+
+        finally:
             self.stop_load()
 
     def load(self):
