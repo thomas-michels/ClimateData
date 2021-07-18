@@ -68,7 +68,6 @@ class MainWindow:
         self._components['lbl_station'] = lbl_station
 
         et_station = self._create_edit_text(120, 230, 150, 30)
-        et_station.setText('iblumena15')
         self._components['et_station'] = et_station
 
         lbl_init_date = self._create_label('Data Início', 20, 270, 190, 30)
