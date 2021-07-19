@@ -6,7 +6,6 @@ import pendulum
 import pandas as pd
 
 from backend.app.exceptions import UnprocessableEntityException
-from backend.app.file_creator import File
 from backend.app.utils import check_is_future_date
 from backend.enums import Enums
 from requests import get
@@ -20,7 +19,6 @@ class ExtractorManager:
     _station: str
     _files: str
     _period: list = []
-    cont = 0
 
     def __init__(self, date_initial: datetime, date_final: datetime, url: str, station: str, files: str):
         self.set_date_initial(date_initial)
@@ -32,19 +30,20 @@ class ExtractorManager:
     def extract(self):
         self.set_period()
         all_data = []
-        print(self._period)
         for day in self._period:
             data = get(self.create_url(day))
 
             if data.status_code != 200:
                 raise UnprocessableEntityException('Estação inválida')
 
-            all_data.append(data.json())
-            print(self.create_url(day))
-            self.cont += 1
-            print(self.cont)
+            if data.status_code == 200 and self._files == 'Varios Arquivos':
+                self.save_many_files([data.json()])
 
-        self.save(all_data)
+            else:
+                all_data.append(data.json())
+
+        if self._files == '1 Arquivo':
+            self.save_one_file(all_data)
         self.reset_dates()
 
     @staticmethod
@@ -66,45 +65,26 @@ class ExtractorManager:
 
         return data_list
 
-    def save(self, all_data: List[dict]):
-        if self._files == '1 Arquivo':
-            station = all_data[0]['observations'][0]['stationID']
-            name = f'{station}-' \
-                   f'{self._date_initial.year}-{self._date_initial.month}-{self._date_initial.day}' \
-                   f'_{self._date_final.year}-{self._date_final.month}-{self._date_final.day}'
+    def save_one_file(self, all_data: List[dict]):
+        data_list = self.convert_data(all_data)
 
-            data_list = self.convert_data(all_data)
+        df = pd.DataFrame(data_list)
 
-            df = pd.DataFrame(data_list)
-            df.to_csv(f'{name}.csv', index=False, sep=';')
+        station = df['stationID'][0]
+        date = df['obsTimeLocal'][0][0:10]
+        date_final = list(df['obsTimeLocal'])[-1][0:10]
 
-        else:
-            station = all_data[0]['observations'][0]['stationID']
-            header = True
-            for data in all_data:
-                data = data['observations']
+        df.to_csv(f'{station}_{date}_{date_final}.csv', index=False, sep=';')
 
-                for observations in data:
+    def save_many_files(self, all_data):
+        data_list = self.convert_data(all_data)
 
-                    date = observations['obsTimeLocal'][:10]
-                    name = f'{station}-' \
-                           f'{date}'
+        df = pd.DataFrame(data_list)
 
-                    file = File().get_file(name, header)
+        station = df['stationID'][0]
+        date = df['obsTimeLocal'][0][0:10]
 
-                    line = ''
-
-                    for key in observations.keys():
-                        header = False
-                        if not type(observations[key]) == dict:
-                            line += str(observations[key]) + ';'
-
-                        else:
-                            for new_key in observations[key].keys():
-                                line += str(observations[key][new_key]) + ';'
-
-                    line = line[0:-1] + line[-1].replace(';', '\n')
-                    file.write(line)
+        df.to_csv(f'{station}_{date}.csv', index=False, sep=';')
 
     def create_url(self, date_for_url: datetime):
         url = Enums().urls[self._url]
