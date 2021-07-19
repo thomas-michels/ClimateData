@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import List
 
 import pendulum
+import pandas as pd
 
 from backend.app.exceptions import UnprocessableEntityException
 from backend.app.file_creator import File
@@ -19,6 +20,7 @@ class ExtractorManager:
     _station: str
     _files: str
     _period: list = []
+    cont = 0
 
     def __init__(self, date_initial: datetime, date_final: datetime, url: str, station: str, files: str):
         self.set_date_initial(date_initial)
@@ -30,17 +32,39 @@ class ExtractorManager:
     def extract(self):
         self.set_period()
         all_data = []
+        print(self._period)
         for day in self._period:
             data = get(self.create_url(day))
-            if data.status_code == 400:
-                data = get(self.create_url(day))
 
             if data.status_code != 200:
                 raise UnprocessableEntityException('Estação inválida')
 
             all_data.append(data.json())
+            print(self.create_url(day))
+            self.cont += 1
+            print(self.cont)
 
         self.save(all_data)
+        self.reset_dates()
+
+    @staticmethod
+    def convert_data(all_data: list):
+        data_list = []
+        for data in all_data:
+            data = data['observations']
+            for line in data:
+                new_dict = {}
+                for key in line:
+                    if type(line[key]) == dict:
+                        for new_key in line[key]:
+                            new_dict[new_key] = line[key][new_key]
+
+                    else:
+                        new_dict[key] = line[key]
+
+                data_list.append(new_dict)
+
+        return data_list
 
     def save(self, all_data: List[dict]):
         if self._files == '1 Arquivo':
@@ -49,27 +73,14 @@ class ExtractorManager:
                    f'{self._date_initial.year}-{self._date_initial.month}-{self._date_initial.day}' \
                    f'_{self._date_final.year}-{self._date_final.month}-{self._date_final.day}'
 
-            file = File().get_file(name)
+            data_list = self.convert_data(all_data)
 
-            for data in all_data:
-                data = data['observations']
-
-                for observations in data:
-                    line = ''
-                    for key in observations.keys():
-                        if not type(observations[key]) == dict:
-                            line += str(observations[key]) + ';'
-
-                        else:
-                            for new_key in observations[key].keys():
-                                line += str(observations[key][new_key]) + ';'
-
-                    line = line[0:-1] + line[-1].replace(';', '\n')
-                    file.write(line)
+            df = pd.DataFrame(data_list)
+            df.to_csv(f'{name}.csv', index=False, sep=';')
 
         else:
             station = all_data[0]['observations'][0]['stationID']
-
+            header = True
             for data in all_data:
                 data = data['observations']
 
@@ -79,11 +90,12 @@ class ExtractorManager:
                     name = f'{station}-' \
                            f'{date}'
 
-                    file = File().get_file(name)
+                    file = File().get_file(name, header)
 
                     line = ''
 
                     for key in observations.keys():
+                        header = False
                         if not type(observations[key]) == dict:
                             line += str(observations[key]) + ';'
 
@@ -104,6 +116,10 @@ class ExtractorManager:
         url = url.replace("#####", self._station)
         return url
 
+    def reset_dates(self):
+        self._date_initial = datetime.today()
+        self._date_final = datetime.today()
+
     def set_date_initial(self, date_initial: datetime):
         check_is_future_date(date_initial)
         self._date_initial = date_initial
@@ -113,6 +129,9 @@ class ExtractorManager:
         self._date_final = date_final
 
     def set_period(self):
+        if len(self._period) != 0:
+            self._period = []
+
         period = pendulum.period(self._date_initial, self._date_final)
         for days in period.range('days'):
             self._period.append(datetime(days.year, days.month, days.day))

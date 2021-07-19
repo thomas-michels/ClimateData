@@ -11,7 +11,8 @@ class File:
         file.write("windchillHigh;windchillLow;windchillAvg;heatindexHigh;heatindexLow;heatindexAvg;")
         file.write("pressureMax;pressureMin;pressureTrend;precipRate;precipTotal\n")
 
-    def get_file(self, name):
+    def get_file(self, name, header=True):
         file = open(f"{PATH}\{name}.txt", 'a')
-        self.header(file)
+        if header:
+            self.header(file)
         return file
